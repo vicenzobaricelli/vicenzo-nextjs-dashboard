@@ -1,19 +1,41 @@
-'use client';
+"use client";
 
-import { useActionState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { authenticate } from '@/app/lib/actions';
-import { Button } from '@/app/ui/button';
-import { AtSymbolIcon, KeyIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
-import { ArrowRightIcon } from '@heroicons/react/20/solid';
+import { useState } from "react"; 
+import { useSearchParams } from "next/navigation";
+import { authenticate } from "@/app/lib/actions";
+import { Button } from "@/app/ui/button";
+import { AtSymbolIcon, KeyIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import { ArrowRightIcon } from "@heroicons/react/20/solid";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-  const [errorMessage, formAction, isPending] = useActionState(authenticate, undefined);
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+
+  // Manually handle form submission state
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [isPending, setIsPending] = useState(false);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setIsPending(true);
+    setErrorMessage(null);
+
+    const formData = new FormData(event.target);
+    try {
+      const response = await authenticate(formData);
+      if (response.error) {
+        setErrorMessage(response.error);
+      } else {
+        window.location.href = callbackUrl; // Redirect after successful login
+      }
+    } catch (error) {
+      setErrorMessage("Something went wrong.");
+    }
+    setIsPending(false);
+  }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="rounded-lg bg-gray-50 px-6 pb-6 pt-8">
         <h1 className="mb-4 text-2xl font-semibold">Log in to continue</h1>
 
@@ -25,8 +47,9 @@ export default function LoginForm() {
 
         <input type="hidden" name="redirectTo" value={callbackUrl} />
         
-        <Button className="mt-6 w-full flex items-center justify-center" aria-disabled={isPending}>
-          Log in <ArrowRightIcon className="ml-2 h-5 w-5 text-gray-50" />
+        <Button type="submit" className="mt-6 w-full flex items-center justify-center" disabled={isPending}>
+          {isPending ? "Logging in..." : "Log in"}
+          <ArrowRightIcon className="ml-2 h-5 w-5 text-gray-50" />
         </Button>
 
         {/* Error Message */}
